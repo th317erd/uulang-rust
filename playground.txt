@@ -1,0 +1,779 @@
+// First draft #1
+// # Selector -> (id = "something" & movies.release_date < NOW)
+// # Schema / Getter -> [] or {}
+// # Fetcher / Coercer -> <>
+
+// {
+//   DiffSeconds($from!, $0) -> seconds;
+//   (span = "years") -> seconds -> Div(31536000) -> $!;
+//   (span = "months") -> seconds -> Div(345345) -> $!;
+// } -> TimeDiffAbs;
+
+// DaysDiffFloor = <
+//   $ -> TimeDiffAbs(from = NOW & span = "years"),
+//   $ -> Floor,
+// >
+
+// User = {
+//   User.id -> Integer,
+//   User.first_name -> String,
+//   User.last_name -> String,
+//   User.age -> UserAge(id = this.id),
+//   User.avatar -> Image,
+//   User.location -> Geolocation,
+//   User.dob -> Date,
+// };
+
+// UserAge = {
+//   # Merge/transform/fold up
+//   get_user($id!, $) -> {
+//     User.age -> DaysDiffFloor,
+//   } -> this;
+// }
+
+// Movies = [
+//   {
+//     Movie.id -> Integer,
+//     Movie.title -> String,
+//     Movie.release_date -> Date,
+//     Movie.actors = [
+//       [ActorMovies.movie_id = parent.id] -> {
+//         this.actor.name -> String,
+//         this.actor.age -> Integer,
+//         this.actor.favorite_color -> Color,
+//         this.actor.movies -> Movies(actors.name = this.name),
+//       }
+//     ]
+//   }
+// ];
+
+// get_movies(title = "Something")
+// get_movies(title = "something" & actors.name = "dude")
+// get_movies(title = "something" | actors.name = "dude")
+
+
+// Second draft #2
+
+# Array ???
+[operations on array happen here]@local_var_name
+
+# Function... Object?
+{operations on context happen here}@func_name
+
+# Calling function
+func_name(arg1 = value)
+(left hand) = func (right hand) = selector -> call function
+
+(local_var)
+(no left hand) = current context (right hand) -> call current context
+
+# Conditionals
+
+// If
+(selector1 & selector2) ?> { do_something }
+
+// If Not
+(selector1 & selector2) !> { do_something_else }
+
+// How to chain them?
+????
+
+# Literal/macro
+
+Literals can be converted to and from strings easily
+
+Literal definition: `` `#buckets.users` >> literal``;
+
+Passing literals around: `literal >> some_func()`
+
+Expanding literals in-place: `literal!`
+
+Requiring a resource/module:
+```
+use(`../path/to/file.ext`)
+use(`/universe/tom_brady/derp`)
+use(`/local/some/package`)
+use(`{components!}/button`)
+```
+
+Which is equivilent to:
+```
+// The last expression is always the return result
+// Returns can happen deliberately by doing: result >> ;
+// (piping into a void expression)
+
+// !! means turn previous block into macro/literal
+
+{
+  file(path = `{dir!}../path/to/file.ext`, mode = `r`) >> {
+    (error) ?> panic!(`Unable to open file`)
+    { `{read()}`! }
+  }
+}!! >> use;
+```
+
+# Selectors
+
+Selector named @users
+
+```
+collect = {
+  // If we hit the end of the iterator,
+  // then return all items
+
+  items = Array!();
+
+  {
+    $0 !> items >>;
+    items.push($0);
+  } >>;
+}
+
+{users = `#buckets.users`;<users!.first_name@first_name = $first_name !> $0 & users!.last_name = $last_name !> $1>}@users;
+
+users('Wyatt', 'Greenway')@selector;
+
+// Query database
+users = DB.query(selector) >> {
+  age = calculate_age();
+};
+```
+
+# Creating a class
+
+```
+{
+  // Private variable example
+  some_const = `SOME_CONST`;
+
+  // If not, local variable, either named or positional
+  name = $name !> $0;
+
+  { log!('Hello {name}! How are you today?') }@greet;
+  @; void@void; (void always means 'this', so this means 'this' >> return)
+}!!@Greeter;
+
+// Instantiation class
+Greeter!(name = 'Wyatt')@class;
+class.greet();
+
+// $ Hello Wyatt! How are you today?
+
+{
+  // Inherit from Greeter class
+  Greeter!@super;
+  super@;
+
+  { super.greet(); log!('Woof Woof!') }@greet;
+  @;
+}!!@Dog;
+
+Dog!(name = 'Spot')@dog;
+dog.greet();
+
+// $ Hello Spot! How are you today?
+// $ Woof Woof!
+```
+
+# Array
+
+```
+// "Opening up" a context
+value >> {
+  ...value context here...
+};
+```
+
+Let's create an array!
+
+```
+{
+  this = @;
+  length = 0;
+
+  add_item = {
+    // Opened up "$item" here
+    this.{
+      // Opened up "this" context here
+
+      // Assign #number (index) to "this" context,
+      // So array indecies can be accessed:
+      // array.0
+      // array.1
+      $item@`{$index}`;
+      length += 1;
+    }
+  };
+
+  // Loop over range
+  // 0..$.length@index >> {
+  //   item = this.$`{index}`;
+  //   add_item(index = index, item = item);
+  // }
+
+  // Or...
+  $.items@item >> add_item;
+
+  {
+    $.items@item >> add_item;
+    this >>;
+  }@push;
+
+  {
+    count = $count !> $0 !> 1;
+    0..count({
+      this >> {
+        // Oops! We broke our index! Oh well...
+        // we would make sure we didn't do that
+        // in a thorough implementation
+        nil@`{index}`;
+        length -= 1;
+      }
+    })
+
+    // should return items here
+  }@pop;
+
+  {
+    0..length@index >> {
+      this.{
+        this.$index >>;
+      }
+    } >>;
+  }@items;
+}!!@Array;
+
+Array!("wyatt", 1, 2, true, false)@array;
+array.push('some', 'other', 'things');
+
+```
+
+# Version 3
+
+# $       = arguments
+# @       = "this"
+# >>      = pipe
+# *>      = map/generator
+# =>      = collect
+# :ident  = symbol/identifier
+
+# macro
+# args = !{
+#   $0
+# };
+
+# Get arguments for function
+$ *> (:item, :next = nil, :prev = nil) => $;
+
+# Loop 1
+# i = 0; { #(i < 10) && (:index = i) *> }() *> {
+#   log!(`Counting {$index}`);
+#   ($index) *>;
+# } => items;
+
+# Loop 2
+# items = { i = 0; { #(i < 10) && (i) *> }() *> {
+#   log!(`Counting {$i}`);
+#   ($i) *>;
+# } };
+
+# Loop 3
+# range *> {
+#   log!(`Counting {$item}`);
+#   ($item) *>;
+# }
+
+LinkedList = {
+  Node = {
+    # Get arguments for function
+    $ = (:value, :next = nil, :prev = nil) = $;
+
+    value:  $value;
+    next:   $next;
+    prev:   $prev;
+
+    @;
+  };
+
+  this = @;
+
+  head = nil;
+  tail = nil;
+
+  @insert_back = {
+    $ = (:item) = $;
+
+    node = Node($item);
+
+    #(head == nil) && {
+      this.head = node;
+    } || #(tail == nil) {
+      this.tail = node;
+    } || {
+      node.prev = this.tail;
+      this.tail.next = node;
+    }
+
+    this;
+  }
+
+  @pop_back = {
+    0..($count || $0) *> {
+      #(tail == nil) =>;
+
+      node = tail;
+
+      this.tail = this.tail.prev;
+      this.tail.next = nil;
+
+      node;
+    }
+  }
+
+  @get_by_index = {
+    head = this.head;
+
+    i = 0; { #(i < $index && head) >> { i += 1; head = $head.next; $head *> } *> }
+  }
+
+  $ *> insert($0);
+
+  @;
+}
+
+Array = {
+  this = @;
+
+  items = LinkedList($);
+
+  @push = {
+    items.insert_back($);
+  }
+
+  @pop = {
+    $ = (:count = 1) = $;
+    items.pop_back($count);
+  }
+
+  @_index_ = {
+
+  }
+}
+
+# Version 4
+
+// Reserved words (only reserved where types are specified):
+// str, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, char, blk
+// as (cast to another type), i.e. <u8 as u16>, cast value: 0<u8 as u16>
+
+// Reserved characters
+// @, !, {}, [], :, >>, logical operators, binary operators, shift operators
+
+// @ = this
+// $ = provided scope/func
+// @.name = publish "name" variable in scope (@)
+// :symbol = a symbol (literal)
+// `:{name}`! = turn anything into a literal
+// "string" = string literal
+// {} = function / object
+// [] = array (syntactic sugar)
+// ! = execute now (with empty arguments)
+// (func/obj){rh} = call func, with rh as arguments (new context, $)
+// result of last statement is always returned as the final value from the function
+
+// Scopes/blocks
+// A block/scope is created with curly braces {}
+// A block/scope is also a function
+// By default all scopes create an "empty" scope object that gets popped onto
+// the current scope stack.
+
+// Take the following example
+/// A = { private = 'No, I am a general!'; B = { log[private] }; C = { log['hello world'] } }
+// A = block
+// B = block, that inherits from A (because it uses private variables from A) A -> B
+// C = block, with no inheritance, because it doesn't use any variables from A
+
+// A function call is simply a block followed by another block
+/// A{}
+
+// Call order is from left to right
+// The following means, call A, passing the block { @.derp = 'true' },
+// expecting this function to return another block, and call that block
+// with the scope {}
+/// A{ @.derp = 'true' } {}
+
+// Whereas...
+/// A{ @.derp = 'true' }! {}
+// ...means: Call A with the scope { @.derp = 'true' }, expect that A
+// will return a block, and call that block with the block {}
+// ... remember, ! means "call now with an empty scope"... in this case,
+// the resolution order is { @.derp = 'true' }! -> call A -> return block -> call returned block with {}
+
+// But what about this?
+/// A{ @.derp = 'true' }! {}!
+// ... resulution order is: { @.derp = 'true' }! -> A -> {}! -> returned
+
+
+// Comment
+/* Comment, because single character comments can get confused with variables/statements */
+
+// If statement looks like this (see '#' above):
+///
+/// #{incoming < (i + 1)} {
+///   log['message', i]
+/// } || {
+///   // This is the "else" block
+///   log['nope!']
+/// }!
+///
+
+// An array is simple syntactic sugar like follows
+// [ @.name = 'John Bob', 1, true ] = { @.0 = @.name = 'John Bob'; @.1 = 1; @.2 = true; @ }!
+
+// ... So that the following works:
+// log[ 'John Bob', 1, true ]
+
+// Which after desugaring is:
+// log{ @.0 = @.name = 'John Bob'; @.1 = 1; @.2 = true; @.length = 3; @ }!
+
+// Explicitly setting scope
+// {} = scope
+// { @ = this }
+// scope = { @.derp = 0 }
+// scope@{} bind scope to {}
+
+// "scope binding" works by injecting the specified explicit
+// scope between the newly created call scope, and the parent scope
+// For example
+/// A = { @.public = "something"; @ }
+/// (A@{ @.derp = "true" })!
+/// means the final scope inside A will be parent_scope -> { @.derp } -> A
+
+// Since scopes can access parent scopes publics, this works great
+// and still protects privates.
+
+// What if we want to expose privates, but only a few?
+/// A = { scope = $; private = true; scope@{ @.private = private }! }
+// privates can only be access if the scope is created in the scope
+// that owns the private. The { @.private = private } scope
+// can access the private, because it is created in the same scope.
+// We then publish this as a public, which means all child scopes
+// can access the private.
+// The final scope stack would be: parent_scope -> A -> { @.private } -> scope
+// So when "scope" is called, we can access "private"
+/// bound = A{ log[private] }
+/// bound!
+
+// Private vs public
+// Private variables can only be accessed directly if the block is contained in the same block where the variables are declared
+// Private variables can not be accessed via the index operation '.'
+
+// Loop
+/// @.loop = {
+///   // Capture items to iterate
+///   @.items = $
+///   @.length = $.length
+///   @.index = 0
+///
+///   // If we have already hit the end, then just return nil
+///   (index >= length) && nil >>
+///
+///   stop = false
+///
+///   // macro
+///   break = `{stop=true;''};nil>>;`
+///
+///   // Return a func
+///   next = {
+///     // Is this the last item?
+///     (index >= length) && nil >>
+///
+///     // call block, with index, item, and length (@ scope... current scope)
+///     // $ = block passed in
+///     // @ = rebind block scope to { @.break = break }
+///     // { ... } call block ($) with these arguments...
+///     //   @.item = items.index means @.item (set on current scope), = equals, items (fetched from private scope) (index operator)[index] (index also fetch from private scope)
+///     $@{ @.break = break; }{ @.item = items.index; @.index = index; @.items = items; @ }!
+///
+///     index += 1
+///     next!
+///   }
+/// }
+///
+/// // Example usage
+/// loop[1,2,3,4,5] {
+///   log[$.item]
+///   // this expands the macro (which are blocks) in place -> `;nil>>;`,
+///   // which calls the inner block (stop=true) [in the private scope], and then returns nil
+///   // As always, the ! means call with an empty block
+///   break!
+/// }
+
+// Objects only only inherit from the parent
+// scope if they use a variable from the parent scope
+//
+// How to create an object:
+/// item = {}!
+/// item.:key = 'derp'
+/// item.:value = 0
+
+// Classes:
+/// Pet = {
+///   @.name = select[$.name, $.0, 'unnamed']
+///
+///   @.sound = {
+///     'nothing, and just stares blankly...'
+///   }
+///
+///   @.greet = {
+///     log[join[name, ' says ', sound!]]
+///   }
+///
+///   @
+/// }
+///
+/// pet = Pet{ @.name = 'Whatever' }
+/// pet = Pet['Whatever']
+///
+/// Dog = {
+///   super = Pet$
+///
+///   ({
+///     @.sound = {
+///       'woof woof!'
+///     }
+///
+///     @.greet {
+///       super.greet!
+///     }
+///
+///     @
+///   }@super)!
+/// }
+
+// Types (probably won't implement)
+/// var = true // boolean
+/// var = 'string' // string
+/// var = 0 // u32
+/// var = 0u8 // u8
+/// var = 0.0f32 // f32
+/// var = 0.0f   // f64
+/// var = 0.0f64 // f64
+
+// For blocks type is infered from return types
+/// { var = 0u8 } // return type is u8
+
+// This is valid, because all blocks can always return 'nil', even if they have a set inferred type
+// This is returning either u8, or nil
+/// { var = 0u8; #{var < 10} && >>; nil }
+
+// This is invalid, because the method is returning two different types
+/// A = { var = $.arg; (var < 10) && >>; 'string' }
+/// var = A{@.arg = 5} // invalid! We don't know how to handle the multiple different return types...
+
+// You can return multiple different types by capturing all
+// all possible return types into variables
+/// A = { var = $.arg; #{var < 10} && >>; 'string' }
+// This is valid, because blocks always have the type of "block"
+// And we can use it like this:
+/// var, string = A{@.arg = 5}<u8, string>
+/// var && do something with u8
+/// string && do something with string
+
+// ... or ...
+// (var && do something with var) || (string && do something with string)
+
+// ... or ...
+var = A{@.arg = 5}<u8> // will throw an exception unless a u8 or nil is returned
+
+// ... or ...
+var = A{@.arg = 5}<u8, ...> // will not throw an exception, if return isn't u8, then will use nil instead
+
+// ... We could also assert...
+/// assert_not_nil[var]
+
+
+// Raw mode
+// TODO...
+```
+extern char *c_func(char *, int number);
+c_func({str}, {str}) >>;
+```
+
+// Garbage collector
+// Frees references when there is no longer visibility to "outside world"
+// Only scopes reference count...
+/// {
+///   A = {}!
+///   B = {}!
+///   A.b = B
+///   B.a = A
+/// }
+// Here A and B are dropped, which means .a and .b no longer have visibility to the outside world
+// and so .a and .b are also dropped
+
+// Example drop logic
+/// {
+///   private.A = {}!
+///   private.B = {}!
+///   private.A.b = B
+///   private.B.a = A
+///   // private dropped, check B -> no more visibility to outside world, drop B -> drop a
+///   // private dropped, check A -> no more visibility to the outside world, so drop A -> drop b
+/// }
+
+// There is always two sub-scopes per-scope: public, and private
+// So for example, if we reference a variable from a scope, then
+// a new scope starts a reference count: public, private, new_scope -> public
+// This means all variables "carry" their owning scope around
+
+
+# Version 5
+
+// @ = "this", or "head of current object", but only in object contexts
+// -> pipe output or input
+// >> push forward (yield/emit)
+// << push backward (return/remit)
+// if statements are just boolean statements: ((true) && do_something) || (do_something_else)
+// any code whatsoever can run in the context of an object
+// if statements with a body simply create an object, and run the code inside it
+// (true) && { do_something }
+//
+// last executed statement result is the return value by default
+// nil = nothing/stop
+// :symbol = a symbol
+
+// Channel semantics
+// 1) functions can return channels
+// 2) channels are dual ended (input, output)
+// 3) yielding a channel collects the last result
+// 4) channeling to a channel connects input of channel A to channel B
+// 5) channeling to a function calls the function for each value yielded
+// 6) yielding pauses the function that yeilded
+// 7) unyielding (waiting for input) pauses until input is received
+// 8) yielding a value into channel calls the channel method with the yielded value as the argument
+// 0) when a channel pushes a value back up-stream, if that value is fed into a "void" channel, then the method terminates
+
+range = func(start, end, step) {
+  loop = *func() {
+    >> index;
+
+    (start < end && index >= end) ||
+    (start > end && index <= start) && << halt;
+
+    result = index >>;
+    (result is :halt) && << result;
+
+    << index + step >> @;
+  }
+
+  (start == end) && <<;
+  (step == nil) && step = 1;
+
+  loop(start);
+}
+
+collect = func() {
+  items = [];
+
+  collector = *func() {
+    >> item; # first pass will wait here, because no arguments provided below
+    items.push(item);
+    << items;
+  }
+
+  collector();
+}
+
+result = range(0, 10); # result is now a channel?
+
+range = func(start, end, step) {
+  iter = {
+    index = start;
+
+    next: func() {
+      (start < end && index >= end) ||
+      (start > end && index <= start) && return nil;
+
+      index += step;
+
+      return index;
+    }
+
+    reverse: func() {
+      swap(start, end);
+      step = -step;
+      @;
+    }
+  };
+}
+
+indexes = range(0, 10) -> func() {
+  index <<;
+  log("Index: {index}");
+  index >>;
+} -> [];
+
+collector = func() {
+  -> items;
+  items >>;
+}
+
+items = range(0, 10) -> collector();
+
+// Classes
+Animal = func(name) {
+  {
+    sound: func() {
+      '*silence*...';
+    }
+
+    greet: func() {
+      T.log("{name} says {@.sound()}");
+    }
+  };
+}
+
+# Function "Bind"
+AnimalWithName = func() {
+  Animal("Bob");
+}
+
+Dog = func(name) {
+  // Construct super
+  super = Animal(name);
+
+  // Create a new object, becoming a decendent of "super"
+  {
+    sound: func() {
+      'woof woof!';
+    }
+
+    greet: func() {
+      super.greet();
+    }
+
+    :[proto]: [ super ]
+    :[[]]: func(key) {
+      result = _get_attr(@, key); # Skips index recursion
+      (result is undefined && super[key]);
+    }
+
+    :[[]=]: func(key, value) {
+      _set_attr(@, key, value);
+      value;
+    }
+  };
+}
+
+dog = Dog("Woofer");
+dog.greet();
+
+// Macros
+!<<\s*($name:ident)\s*,\s*($props:assignment_expression)*\s*\>($...children:self)</$name\>> {
+  createElement('$name', $...props, $...children)
+}
+
+!<obj\(\)
+
+obj!(test)
