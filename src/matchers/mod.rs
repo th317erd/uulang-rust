@@ -9,5 +9,7 @@ pub mod identifier;
 pub mod integer_literal;
 pub mod literal;
 pub mod regex_literal;
+pub mod scope;
 pub mod string_literal;
+pub mod uulang;
 pub mod whitespace;

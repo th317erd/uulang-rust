@@ -1,10 +1,10 @@
 name1 = test;
-name2=123;
-name3
+_name2=123;
+$name3
 =
 "hello world!";
-name4 = true;
-name5    =false;
-name6=12.43;
+name4$ = true;
+name5_    =false;
+name_6=12.43;
 name7=12.43e-10;
 name8=/hello/i;
